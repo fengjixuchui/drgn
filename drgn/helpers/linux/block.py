@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """
 Block Layer
@@ -15,7 +15,7 @@ Before that, they were represented by ``struct hd_struct``.
 from typing import Iterator
 
 from drgn import Object, Program, container_of
-from drgn.helpers import escape_ascii_string
+from drgn.helpers.common.format import escape_ascii_string
 from drgn.helpers.linux.device import MAJOR, MINOR, MKDEV
 from drgn.helpers.linux.list import list_for_each_entry
 

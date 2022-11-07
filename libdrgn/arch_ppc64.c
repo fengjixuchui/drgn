@@ -1,7 +1,8 @@
 // (C) Copyright IBM Corp. 2020
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <byteswap.h>
+#include <elf.h>
 #include <string.h>
 
 #include "drgn.h"
@@ -9,7 +10,6 @@
 #include "platform.h" // IWYU pragma: associated
 #include "program.h"
 #include "register_state.h"
-#include "serialize.h"
 
 #include "arch_ppc64_defs.inc"
 

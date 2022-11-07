@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 /**
  * @file
@@ -34,6 +34,9 @@ struct drgn_error *linux_helper_per_cpu_ptr(struct drgn_object *res,
 
 struct drgn_error *linux_helper_idle_task(struct drgn_object *res,
 					  uint64_t cpu);
+
+struct drgn_error *linux_helper_task_cpu(const struct drgn_object *task,
+					 uint64_t *ret);
 
 struct drgn_error *
 linux_helper_radix_tree_lookup(struct drgn_object *res,

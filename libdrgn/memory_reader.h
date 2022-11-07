@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 /**
  * @file
@@ -98,9 +98,7 @@ struct drgn_memory_file_segment {
 	uint64_t file_offset;
 	/**
 	 * Size of the segment in the file. This may be less than the size of
-	 * the segment in memory, which means that the remaining bytes were in
-	 * the program's memory but were not saved in the core dump. Attempting
-	 * to read these bytes is treated as a fault.
+	 * the segment in memory.
 	 */
 	uint64_t file_size;
 	/** File descriptor. */
@@ -110,6 +108,12 @@ struct drgn_memory_file_segment {
 	 * OS error.
 	 */
 	bool eio_is_fault;
+	/**
+	 * If @c true, reads between @ref file_size and the size of the segment
+	 * in memory will be returned as zeroes. Otherwise, such reads will
+	 * result in a fault.
+	 */
+	bool zerofill;
 };
 
 /** @ref drgn_memory_read_fn which reads from a file. */

@@ -1,11 +1,10 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import contextlib
 import ctypes
 import mmap
 import os
-import platform
 import struct
 import tempfile
 import unittest
@@ -14,11 +13,20 @@ from drgn import FaultError
 from drgn.helpers.linux.mm import (
     PFN_PHYS,
     PHYS_PFN,
+    PageCompound,
+    PageHead,
+    PageSwapBacked,
+    PageTail,
+    PageWriteback,
     access_process_vm,
     access_remote_vm,
     cmdline,
+    compound_head,
+    compound_nr,
+    compound_order,
     decode_page_flags,
     environ,
+    page_size,
     page_to_pfn,
     page_to_phys,
     page_to_virt,
@@ -37,6 +45,7 @@ from tests.linux_kernel import (
     skip_unless_have_full_mm_support,
     skip_unless_have_test_kmod,
 )
+from util import NORMALIZED_MACHINE_NAME
 
 
 class TestMm(LinuxKernelTestCase):
@@ -69,6 +78,63 @@ class TestMm(LinuxKernelTestCase):
                         for entry in struct.unpack(f"{pages}Q", pagemap.read(pages * 8))
                     ]
                 yield map, address, pfns
+
+    def test_page_flag_getters(self):
+        with self._pages() as (map, _, pfns):
+            page = pfn_to_page(self.prog, pfns[0])
+            # The page flag getters are generated, so just pick a positive case
+            # and a negative case to cover all of them.
+            self.assertTrue(PageSwapBacked(page))
+            self.assertFalse(PageWriteback(page))
+
+    @skip_unless_have_test_kmod
+    def test_PageCompound(self):
+        self.assertFalse(PageCompound(self.prog["drgn_test_page"]))
+        self.assertTrue(PageCompound(self.prog["drgn_test_compound_page"]))
+        self.assertTrue(PageCompound(self.prog["drgn_test_compound_page"] + 1))
+
+    @skip_unless_have_test_kmod
+    def test_PageHead(self):
+        self.assertFalse(PageHead(self.prog["drgn_test_page"]))
+        self.assertTrue(PageHead(self.prog["drgn_test_compound_page"]))
+        self.assertFalse(PageHead(self.prog["drgn_test_compound_page"] + 1))
+
+    @skip_unless_have_test_kmod
+    def test_PageTail(self):
+        self.assertFalse(PageTail(self.prog["drgn_test_page"]))
+        self.assertFalse(PageTail(self.prog["drgn_test_compound_page"]))
+        self.assertTrue(PageTail(self.prog["drgn_test_compound_page"] + 1))
+
+    @skip_unless_have_test_kmod
+    def test_compound_head(self):
+        self.assertEqual(
+            compound_head(self.prog["drgn_test_page"]), self.prog["drgn_test_page"]
+        )
+        self.assertEqual(
+            compound_head(self.prog["drgn_test_compound_page"]),
+            self.prog["drgn_test_compound_page"],
+        )
+        self.assertEqual(
+            compound_head(self.prog["drgn_test_compound_page"] + 1),
+            self.prog["drgn_test_compound_page"],
+        )
+
+    @skip_unless_have_test_kmod
+    def test_compound_order(self):
+        self.assertEqual(compound_order(self.prog["drgn_test_page"]), 0)
+        self.assertEqual(compound_order(self.prog["drgn_test_compound_page"]), 1)
+
+    @skip_unless_have_test_kmod
+    def test_compound_nr(self):
+        self.assertEqual(compound_nr(self.prog["drgn_test_page"]), 1)
+        self.assertEqual(compound_nr(self.prog["drgn_test_compound_page"]), 2)
+
+    @skip_unless_have_test_kmod
+    def test_page_size(self):
+        self.assertEqual(page_size(self.prog["drgn_test_page"]), self.prog["PAGE_SIZE"])
+        self.assertEqual(
+            page_size(self.prog["drgn_test_compound_page"]), 2 * self.prog["PAGE_SIZE"]
+        )
 
     @skip_unless_have_full_mm_support
     def test_decode_page_flags(self):
@@ -202,7 +268,7 @@ class TestMm(LinuxKernelTestCase):
             data,
         )
 
-    @unittest.skipUnless(platform.machine() == "x86_64", "machine is not x86_64")
+    @unittest.skipUnless(NORMALIZED_MACHINE_NAME == "x86_64", "machine is not x86_64")
     def test_non_canonical_x86_64(self):
         task = find_task(self.prog, os.getpid())
         data = b"hello, world"

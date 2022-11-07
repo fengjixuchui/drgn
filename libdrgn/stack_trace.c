@@ -1,9 +1,7 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <assert.h>
-#include <byteswap.h>
-#include <dwarf.h>
 #include <elfutils/libdw.h>
 #include <elfutils/libdwfl.h>
 #include <inttypes.h>
@@ -13,6 +11,7 @@
 #include "cfi.h"
 #include "debug_info.h"
 #include "drgn.h"
+#include "dwarf_constants.h"
 #include "dwarf_info.h"
 #include "error.h"
 #include "helpers.h"
@@ -108,7 +107,7 @@ drgn_stack_trace_num_frames(struct drgn_stack_trace *trace)
 LIBDRGN_PUBLIC struct drgn_error *
 drgn_format_stack_trace(struct drgn_stack_trace *trace, char **ret)
 {
-	struct string_builder str = {};
+	struct string_builder str = STRING_BUILDER_INIT;
 	for (size_t frame = 0; frame < trace->num_frames; frame++) {
 		if (!string_builder_appendf(&str, "#%-2zu ", frame))
 			goto enomem;
@@ -161,7 +160,7 @@ drgn_format_stack_trace(struct drgn_stack_trace *trace, char **ret)
 		    !string_builder_appendc(&str, '\n'))
 			goto enomem;
 	}
-	if (!string_builder_finalize(&str, ret))
+	if (!(*ret = string_builder_null_terminate(&str)))
 		goto enomem;
 	return NULL;
 
@@ -173,7 +172,7 @@ enomem:
 LIBDRGN_PUBLIC struct drgn_error *
 drgn_format_stack_frame(struct drgn_stack_trace *trace, size_t frame, char **ret)
 {
-	struct string_builder str = {};
+	struct string_builder str = STRING_BUILDER_INIT;
 	struct drgn_register_state *regs = trace->frames[frame].regs;
 	if (!string_builder_appendf(&str, "#%zu at ", frame))
 		goto enomem;
@@ -220,7 +219,7 @@ drgn_format_stack_frame(struct drgn_stack_trace *trace, size_t frame, char **ret
 	    !string_builder_append(&str, " (inlined)"))
 		goto enomem;
 
-	if (!string_builder_finalize(&str, ret))
+	if (!(*ret = string_builder_null_terminate(&str)))
 		goto enomem;
 	return NULL;
 
@@ -376,6 +375,27 @@ drgn_stack_frame_symbol(struct drgn_stack_trace *trace, size_t frame,
 	}
 	*ret = sym;
 	return NULL;
+}
+
+LIBDRGN_PUBLIC struct drgn_error *
+drgn_stack_frame_locals(struct drgn_stack_trace *trace, size_t frame_i,
+			const char ***names_ret, size_t *count_ret)
+{
+	struct drgn_stack_frame *frame = &trace->frames[frame_i];
+	if (frame->function_scope >= frame->num_scopes) {
+		*names_ret = NULL;
+		*count_ret = 0;
+		return NULL;
+	}
+	return drgn_dwarf_scopes_names(frame->scopes + frame->function_scope,
+				       frame->num_scopes - frame->function_scope,
+				       names_ret, count_ret);
+}
+
+LIBDRGN_PUBLIC
+void drgn_stack_frame_locals_destroy(const char **names, size_t count)
+{
+	free(names);
 }
 
 LIBDRGN_PUBLIC struct drgn_error *
@@ -612,22 +632,12 @@ drgn_get_initial_registers(struct drgn_program *prog, uint32_t tid,
 			 * the idle task by CPU. Rather than making PID 0 a
 			 * special case, we handle all tasks this way.
 			 */
-			union drgn_value value;
-			err = drgn_object_member_dereference(&tmp, &obj, "cpu");
-			if (!err) {
-				err = drgn_object_read_integer(&tmp, &value);
-				if (err)
-					goto out;
-			} else if (err->code == DRGN_ERROR_LOOKUP) {
-				/* !SMP. Must be CPU 0. */
-				drgn_error_destroy(err);
-				value.uvalue = 0;
-			} else {
+			uint64_t cpu;
+			err = linux_helper_task_cpu(&obj, &cpu);
+			if (err)
 				goto out;
-			}
 			uint32_t prstatus_tid;
-			err = drgn_program_find_prstatus_by_cpu(prog,
-								value.uvalue,
+			err = drgn_program_find_prstatus_by_cpu(prog, cpu,
 								prstatus,
 								&prstatus_tid);
 			if (err)
@@ -654,6 +664,7 @@ drgn_get_initial_registers(struct drgn_program *prog, uint32_t tid,
 				err = drgn_object_member_dereference(&tmp, &obj, "pid");
 				if (err)
 					goto out;
+				union drgn_value value;
 				err = drgn_object_read_integer(&tmp, &value);
 				if (err)
 					goto out;
@@ -748,8 +759,8 @@ drgn_stack_trace_add_frames(struct drgn_stack_trace **trace,
 	uint64_t bias;
 	Dwarf_Die *scopes;
 	size_t num_scopes;
-	err = drgn_debug_info_module_find_dwarf_scopes(regs->module, pc, &bias,
-						       &scopes, &num_scopes);
+	err = drgn_module_find_dwarf_scopes(regs->module, pc, &bias, &scopes,
+					    &num_scopes);
 	if (err)
 		goto out;
 	pc -= bias;
@@ -985,10 +996,9 @@ drgn_unwind_with_cfi(struct drgn_program *prog, struct drgn_cfi_row **row,
 	bool interrupted;
 	drgn_register_number ret_addr_regno;
 	/* If we found the module, then we must have the PC. */
-	err = drgn_debug_info_module_find_cfi(prog, regs->module,
-					      regs->_pc - !regs->interrupted,
-					      row, &interrupted,
-					      &ret_addr_regno);
+	err = drgn_module_find_cfi(prog, regs->module,
+				   regs->_pc - !regs->interrupted,
+				   row, &interrupted, &ret_addr_regno);
 	if (err)
 		return err;
 

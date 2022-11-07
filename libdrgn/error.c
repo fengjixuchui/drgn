@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <elfutils/libdw.h>
 #include <elfutils/libdwfl.h>
@@ -161,9 +161,8 @@ drgn_error_format_fault(uint64_t address, const char *format, ...)
 struct drgn_error *drgn_error_from_string_builder(enum drgn_error_code code,
 						  struct string_builder *sb)
 {
-	char *message;
-
-	if (!string_builder_finalize(sb, &message)) {
+	char *message = string_builder_null_terminate(sb);
+	if (!message) {
 		free(sb->str);
 		return &drgn_enomem;
 	}

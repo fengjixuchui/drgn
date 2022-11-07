@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <limits.h>
 #include <stdlib.h>
@@ -1234,7 +1234,7 @@ enum drgn_object_encoding drgn_type_object_encoding(struct drgn_type *type)
 	case DRGN_TYPE_ENUM:
 		if (!drgn_type_is_complete(type))
 			return DRGN_OBJECT_ENCODING_INCOMPLETE_INTEGER;
-		/* fallthrough */
+		fallthrough;
 	case DRGN_TYPE_TYPEDEF:
 		return drgn_type_object_encoding(drgn_type_type(type).type);
 	case DRGN_TYPE_VOID:

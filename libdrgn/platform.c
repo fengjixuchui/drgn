@@ -1,12 +1,12 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <byteswap.h>
 #include <elf.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "platform.h"
-#include "util.h"
 
 const struct drgn_register *drgn_register_by_name_unknown(const char *name)
 {

@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """
 Virtual Filesystem Layer
@@ -13,7 +13,7 @@ import os
 from typing import Iterator, Optional, Tuple, Union, overload
 
 from drgn import IntegerLike, Object, Path, Program, container_of, sizeof
-from drgn.helpers import escape_ascii_string
+from drgn.helpers.common.format import escape_ascii_string
 from drgn.helpers.linux.list import (
     hlist_empty,
     hlist_for_each_entry,

@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """
 CPU Scheduler
@@ -9,11 +9,15 @@ The ``drgn.helpers.linux.sched`` module provides helpers for working with the
 Linux CPU scheduler.
 """
 
-from _drgn import _linux_helper_idle_task as idle_task
+from _drgn import (
+    _linux_helper_idle_task as idle_task,
+    _linux_helper_task_cpu as task_cpu,
+)
 from drgn import Object
 
 __all__ = (
     "idle_task",
+    "task_cpu",
     "task_state_to_char",
 )
 

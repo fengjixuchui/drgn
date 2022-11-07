@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import math
 import operator
@@ -16,7 +16,12 @@ from drgn import (
     reinterpret,
     sizeof,
 )
-from tests import MockMemorySegment, MockProgramTestCase, mock_program
+from tests import (
+    MockMemorySegment,
+    MockProgramTestCase,
+    assertReprPrettyEqualsStr,
+    mock_program,
+)
 
 
 class TestInit(MockProgramTestCase):
@@ -1718,3 +1723,7 @@ class TestSpecialMethods(MockProgramTestCase):
             iter,
             Object(self.prog, "int []", address=0),
         )
+
+    def test__repr_pretty_(self):
+        obj = Object(self.prog, "int", value=0)
+        assertReprPrettyEqualsStr(obj)

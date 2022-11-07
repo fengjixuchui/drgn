@@ -38,9 +38,11 @@ scripting in Python. For example, you can debug the Linux kernel:
 Although other debuggers like `GDB <https://www.gnu.org/software/gdb/>`_ have
 scripting support, drgn aims to make scripting as natural as possible so that
 debugging feels like coding. This makes it well-suited for introspecting the
-complex, inter-connected state in large programs. It is also designed as a
-library that can be used to build debugging and introspection tools; see the
-official `tools <https://github.com/osandov/drgn/tree/main/tools>`_.
+complex, inter-connected state in large programs.
+
+Additionally, drgn is designed as a library that can be used to build debugging
+and introspection tools; see the official `tools
+<https://github.com/osandov/drgn/tree/main/tools>`_.
 
 drgn was developed at `Meta <https://opensource.fb.com/>`_ for debugging the
 Linux kernel (as an alternative to the `crash
@@ -62,6 +64,10 @@ Package Manager
 
 drgn can be installed using the package manager on some Linux distributions.
 
+.. image:: https://repology.org/badge/vertical-allrepos/drgn.svg
+    :target: https://repology.org/project/drgn/versions
+    :alt: Packaging Status
+
 * Fedora >= 32
 
   .. code-block:: console
@@ -81,11 +87,26 @@ drgn can be installed using the package manager on some Linux distributions.
   Install the `drgn <https://aur.archlinux.org/packages/drgn/>`_ package from
   the `AUR <https://wiki.archlinux.org/title/Arch_User_Repository>`_.
 
+* Debian >= 12 (Bookworm)
+
+  .. code-block:: console
+
+    $ sudo apt install python3-drgn
+
 * openSUSE
 
   .. code-block:: console
 
       $ sudo zypper install python3-drgn
+
+* Ubuntu
+
+  Enable the `michel-slm/kernel-utils PPA <https://launchpad.net/~michel-slm/+archive/ubuntu/kernel-utils>`_.
+  Then:
+
+  .. code-block:: console
+
+      $ sudo apt install python3-drgn
 
 pip
 ^^^
@@ -115,11 +136,21 @@ From Source
 To get the development version of drgn, you will need to build it from source.
 First, install dependencies:
 
-* Fedora/RHEL/CentOS
+* Fedora
+
+  .. code-block:: console
+
+      $ sudo dnf install autoconf automake elfutils-devel gcc git libkdumpfile-devel libtool make pkgconf python3 python3-devel python3-pip python3-setuptools
+
+* RHEL/CentOS
 
   .. code-block:: console
 
       $ sudo dnf install autoconf automake elfutils-devel gcc git libtool make pkgconf python3 python3-devel python3-pip python3-setuptools
+
+  Optionally, install ``libkdumpfile-devel`` from EPEL on RHEL/CentOS >= 8 or
+  install `libkdumpfile <https://github.com/ptesarik/libkdumpfile>`_ from
+  source if you want support for the makedumpfile format.
 
   Replace ``dnf`` with ``yum`` for RHEL/CentOS < 8.
 
@@ -129,6 +160,9 @@ First, install dependencies:
 
       $ sudo apt-get install autoconf automake gcc git liblzma-dev libelf-dev libdw-dev libtool make pkgconf python3 python3-dev python3-pip python3-setuptools zlib1g-dev
 
+  Optionally, install libkdumpfile from source if you want support for the
+  makedumpfile format.
+
 * Arch Linux
 
   .. code-block:: console
@@ -136,10 +170,8 @@ First, install dependencies:
       $ sudo pacman -S --needed autoconf automake gcc git libelf libtool make pkgconf python python-pip python-setuptools
 
   Optionally, install `libkdumpfile
-  <https://github.com/ptesarik/libkdumpfile>`_ if you want support for the
-  `makedumpfile <https://github.com/makedumpfile/makedumpfile>`_ compressed
-  kernel core dump format. ``libkdumpfile`` is currently only packaged on
-  Fedora and EPEL. For other distributions, you must install it manually.
+  <https://aur.archlinux.org/packages/libkdumpfile/>`__ from the AUR or from
+  source if you want support for the makedumpfile format.
 
 * openSUSE
 
@@ -217,7 +249,7 @@ License
 
 Copyright (c) Meta Platforms, Inc. and affiliates.
 
-drgn is licensed under the `GPLv3
-<https://www.gnu.org/licenses/gpl-3.0.en.html>`_ or later.
+drgn is licensed under the `LGPLv2.1
+<https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html>`_ or later.
 
 .. end-license

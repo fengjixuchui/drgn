@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <elfutils/libdwfl.h>
 #include <limits.h>
@@ -93,7 +93,7 @@ void drgn_register_state_set_pc(struct drgn_program *prog,
 			void **userdatap;
 			dwfl_module_info(dwfl_module, &userdatap, NULL, NULL,
 					 NULL, NULL, NULL, NULL);
-			struct drgn_debug_info_module *module = *userdatap;
+			struct drgn_module *module = *userdatap;
 			static const enum drgn_platform_flags check_flags =
 				(DRGN_PLATFORM_IS_64_BIT |
 				 DRGN_PLATFORM_IS_LITTLE_ENDIAN);

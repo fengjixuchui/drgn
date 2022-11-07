@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <stdarg.h>
 
@@ -51,6 +51,26 @@ PyObject *join_strings(PyObject *parts)
 		return NULL;
 	PyObject *ret = PyUnicode_Join(sep, parts);
 	Py_DECREF(sep);
+	return ret;
+}
+
+PyObject *repr_pretty_from_str(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	static char *keywords[] = {"p", "cycle", NULL};
+	PyObject *p;
+	int cycle;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Op:_repr_pretty_",
+					 keywords, &p, &cycle))
+		return NULL;
+
+	if (cycle)
+		return PyObject_CallMethod(p, "text", "s", "...");
+
+	PyObject *str_obj = PyObject_Str(self);
+	if (!str_obj)
+		return NULL;
+	PyObject *ret = PyObject_CallMethod(p, "text", "O", str_obj);
+	Py_DECREF(str_obj);
 	return ret;
 }
 

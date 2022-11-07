@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 # setuptools must be imported before distutils (see pypa/setuptools#2230).
 import setuptools  # isort: skip  # noqa: F401
@@ -258,6 +258,7 @@ class test(Command):
         command = rf"""
 set -e
 
+export PYTHON={shlex.quote(sys.executable)}
 export DRGN_TEST_KMOD={shlex.quote(str(kmod))}
 if [ -e /proc/vmcore ]; then
     "$PYTHON" -Bm unittest discover -t . -s tests/linux_kernel/vmcore {"-v" if self.verbose else ""}
@@ -265,14 +266,14 @@ else
     insmod "$DRGN_TEST_KMOD"
     DRGN_RUN_LINUX_KERNEL_TESTS=1 "$PYTHON" -Bm \
         unittest discover -t . -s tests/linux_kernel {"-v" if self.verbose else ""}
-    "$PYTHON" vmtest/enter_kdump.py
+    "$PYTHON" -Bm vmtest.enter_kdump
     # We should crash and not reach this.
     exit 1
 fi
 """
         try:
             returncode = vmtest.vm.run_in_vm(
-                command, Path(kernel_dir), Path(self.vmtest_dir)
+                command, Path("/"), Path(kernel_dir), Path(self.vmtest_dir)
             )
         except vmtest.vm.LostVMError as e:
             self.announce(f"error on Linux {kernel_release}: {e}", log.ERROR)
@@ -448,7 +449,7 @@ setup(
     python_requires=">=3.6",
     author="Omar Sandoval",
     author_email="osandov@osandov.com",
-    description="Scriptable debugger library",
+    description="Programmable debugger",
     long_description=long_description,
     long_description_content_type="text/x-rst",
     url="https://github.com/osandov/drgn",
@@ -456,12 +457,12 @@ setup(
         "Bug Tracker": "https://github.com/osandov/drgn/issues",
         "Documentation": "https://drgn.readthedocs.io",
     },
-    license="GPL-3.0-or-later",
+    license="LGPL-2.1-or-later",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Debuggers",

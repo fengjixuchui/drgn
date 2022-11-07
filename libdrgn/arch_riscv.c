@@ -1,7 +1,9 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <byteswap.h>
+#include <elf.h>
+#include <string.h>
 
 #include "platform.h" // IWYU pragma: associated
 

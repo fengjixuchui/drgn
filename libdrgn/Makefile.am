@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -9,9 +9,7 @@ AM_CPPFLAGS = -I $(top_srcdir)/include -D_GNU_SOURCE
 AM_CFLAGS = $(WARN_CFLAGS) $(SANITIZER_CFLAGS)
 AM_LDFLAGS= $(SANITIZER_LDFLAGS)
 
-noinst_HEADERS = include/dwarf.h \
-		 include/elf.h \
-		 include/elfutils/known-dwarf.h
+noinst_HEADERS = include/elf.h
 
 include_HEADERS = drgn.h
 
@@ -48,6 +46,8 @@ libdrgnimpl_la_SOURCES = $(ARCH_DEFS_PYS:_defs.py=.c) \
 			 cityhash.h \
 			 debug_info.c \
 			 debug_info.h \
+			 dwarf_constants.c \
+			 dwarf_constants.h \
 			 dwarf_info.c \
 			 dwarf_info.h \
 			 error.c \
@@ -55,6 +55,8 @@ libdrgnimpl_la_SOURCES = $(ARCH_DEFS_PYS:_defs.py=.c) \
 			 hash_table.c \
 			 hash_table.h \
 			 helpers.h \
+			 io.c \
+			 io.h \
 			 language.c \
 			 language.h \
 			 language_c.c \
@@ -145,7 +147,7 @@ _drgn_la_SOURCES = python/constants.c \
 		   python/error.c \
 		   python/helpers.c \
 		   python/language.c \
-		   python/module.c \
+		   python/main.c \
 		   python/object.c \
 		   python/platform.c \
 		   python/program.c \

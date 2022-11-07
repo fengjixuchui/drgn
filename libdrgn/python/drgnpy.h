@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #ifndef DRGNPY_H
 #define DRGNPY_H
@@ -205,15 +205,15 @@ void *set_drgn_error(struct drgn_error *err);
 void *set_error_type_name(const char *format,
 			  struct drgn_qualified_type qualified_type);
 
+#define call_tp_alloc(type) ((type *)type##_type.tp_alloc(&type##_type, 0))
+
 PyObject *Language_wrap(const struct drgn_language *language);
 int language_converter(PyObject *o, void *p);
 int add_languages(void);
 
 static inline DrgnObject *DrgnObject_alloc(Program *prog)
 {
-	DrgnObject *ret;
-
-	ret = (DrgnObject *)DrgnObject_type.tp_alloc(&DrgnObject_type, 0);
+	DrgnObject *ret = call_tp_alloc(DrgnObject);
 	if (ret) {
 		drgn_object_init(&ret->obj, &prog->prog);
 		Py_INCREF(prog);
@@ -267,6 +267,8 @@ DrgnType *Program_function_type(Program *self, PyObject *args, PyObject *kwds);
 int append_string(PyObject *parts, const char *s);
 int append_format(PyObject *parts, const char *format, ...);
 PyObject *join_strings(PyObject *parts);
+// Implementation of _repr_pretty_() for IPython/Jupyter that just calls str().
+PyObject *repr_pretty_from_str(PyObject *self, PyObject *args, PyObject *kwds);
 
 struct index_arg {
 	bool allow_none;
@@ -305,6 +307,8 @@ DrgnObject *drgnpy_linux_helper_per_cpu_ptr(PyObject *self, PyObject *args,
 					    PyObject *kwds);
 DrgnObject *drgnpy_linux_helper_idle_task(PyObject *self, PyObject *args,
 					  PyObject *kwds);
+PyObject *drgnpy_linux_helper_task_cpu(PyObject *self, PyObject *args,
+				       PyObject *kwds);
 DrgnObject *drgnpy_linux_helper_radix_tree_lookup(PyObject *self,
 						  PyObject *args,
 						  PyObject *kwds);

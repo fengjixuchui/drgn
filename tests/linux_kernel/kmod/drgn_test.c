@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: GPL-2.0-or-later
 
 // Linux kernel module for testing drgn helpers and kernel support. For now,
 // this is all in one file for simplicity and to keep the compilation fast
@@ -10,6 +10,7 @@
 
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/kthread.h>
 #include <linux/list.h>
 #include <linux/llist.h>
 #include <linux/mm.h>
@@ -118,11 +119,15 @@ void *drgn_test_va;
 phys_addr_t drgn_test_pa;
 unsigned long drgn_test_pfn;
 struct page *drgn_test_page;
+struct page *drgn_test_compound_page;
 
 static int drgn_test_mm_init(void)
 {
 	drgn_test_page = alloc_page(GFP_KERNEL);
 	if (!drgn_test_page)
+		return -ENOMEM;
+	drgn_test_compound_page = alloc_pages(GFP_KERNEL | __GFP_COMP, 1);
+	if (!drgn_test_compound_page)
 		return -ENOMEM;
 	drgn_test_va = page_address(drgn_test_page);
 	drgn_test_pa = virt_to_phys(drgn_test_va);
@@ -132,8 +137,43 @@ static int drgn_test_mm_init(void)
 
 static void drgn_test_mm_exit(void)
 {
+	if (drgn_test_compound_page)
+		__free_pages(drgn_test_page, 1);
 	if (drgn_test_page)
 		__free_pages(drgn_test_page, 0);
+}
+
+
+// percpu
+
+DEFINE_PER_CPU(unsigned int, drgn_test_percpu_static);
+const unsigned int drgn_test_percpu_static_prime = 0xa45dcfc3U;
+unsigned int __percpu *drgn_test_percpu_dynamic;
+const unsigned int drgn_test_percpu_dynamic_prime = 0x6d80a613U;
+
+static int drgn_test_percpu_init(void)
+{
+	int cpu;
+	unsigned int static_prime = drgn_test_percpu_static_prime;
+	unsigned int dynamic_prime = drgn_test_percpu_dynamic_prime;
+
+	drgn_test_percpu_dynamic = alloc_percpu(unsigned int);
+	if (!drgn_test_percpu_dynamic)
+		return -ENOMEM;
+	// Initialize the per-cpu variables to powers of a random prime number
+	// which are extremely unlikely to appear anywhere else.
+	for_each_possible_cpu(cpu) {
+		static_prime *= drgn_test_percpu_static_prime;
+		per_cpu(drgn_test_percpu_static, cpu) = static_prime;
+		dynamic_prime *= drgn_test_percpu_dynamic_prime;
+		*per_cpu_ptr(drgn_test_percpu_dynamic, cpu) = dynamic_prime;
+	}
+	return 0;
+}
+
+static void drgn_test_percpu_exit(void)
+{
+	free_percpu(drgn_test_percpu_dynamic);
 }
 
 // rbtree
@@ -265,32 +305,47 @@ static void drgn_test_rbtree_init(void)
 // slab
 
 const int drgn_test_slob = IS_ENABLED(CONFIG_SLOB);
-struct kmem_cache *drgn_test_kmem_cache;
+struct kmem_cache *drgn_test_small_kmem_cache;
+struct kmem_cache *drgn_test_big_kmem_cache;
 
-struct drgn_test_slab_object {
+struct drgn_test_small_slab_object {
 	int padding[11];
 	int value;
 };
 
-struct drgn_test_slab_object *drgn_test_slab_objects[5];
+struct drgn_test_big_slab_object {
+	unsigned long padding[PAGE_SIZE / 3 * 4 / sizeof(unsigned long) - 1];
+	unsigned long value;
+};
+
+struct drgn_test_small_slab_object *drgn_test_small_slab_objects[5];
+struct drgn_test_big_slab_object *drgn_test_big_slab_objects[5];
 
 static void drgn_test_slab_exit(void)
 {
 	size_t i;
 
-	if (!drgn_test_kmem_cache)
-		return;
-
-	for (i = 0; i < ARRAY_SIZE(drgn_test_slab_objects); i++) {
-		if (drgn_test_slab_objects[i]) {
-			kmem_cache_free(drgn_test_kmem_cache,
-					drgn_test_slab_objects[i]);
+	if (drgn_test_big_kmem_cache) {
+		for (i = 0; i < ARRAY_SIZE(drgn_test_big_slab_objects); i++) {
+			if (drgn_test_big_slab_objects[i]) {
+				kmem_cache_free(drgn_test_big_kmem_cache,
+						drgn_test_big_slab_objects[i]);
+			}
 		}
+		kmem_cache_destroy(drgn_test_big_kmem_cache);
 	}
-	kmem_cache_destroy(drgn_test_kmem_cache);
+	if (drgn_test_small_kmem_cache) {
+		for (i = 0; i < ARRAY_SIZE(drgn_test_small_slab_objects); i++) {
+			if (drgn_test_small_slab_objects[i]) {
+				kmem_cache_free(drgn_test_small_kmem_cache,
+						drgn_test_small_slab_objects[i]);
+			}
+		}
+		kmem_cache_destroy(drgn_test_small_kmem_cache);
+	}
 }
 
-// Dummy constructor so test slab cache won't get merged.
+// Dummy constructor so test slab caches won't get merged.
 static void drgn_test_slab_ctor(void *arg)
 {
 }
@@ -299,20 +354,74 @@ static int drgn_test_slab_init(void)
 {
 	size_t i;
 
-	drgn_test_kmem_cache =
-		kmem_cache_create("drgn_test",
-				  sizeof(struct drgn_test_slab_object),
-				  __alignof__(struct drgn_test_slab_object), 0,
-				  drgn_test_slab_ctor);
-	if (!drgn_test_kmem_cache)
+	drgn_test_small_kmem_cache =
+		kmem_cache_create("drgn_test_small",
+				  sizeof(struct drgn_test_small_slab_object),
+				  __alignof__(struct drgn_test_small_slab_object),
+				  0, drgn_test_slab_ctor);
+	if (!drgn_test_small_kmem_cache)
 		return -ENOMEM;
-	for (i = 0; i < ARRAY_SIZE(drgn_test_slab_objects); i++) {
-		drgn_test_slab_objects[i] =
-			kmem_cache_alloc(drgn_test_kmem_cache, GFP_KERNEL);
-		if (!drgn_test_slab_objects[i])
+	for (i = 0; i < ARRAY_SIZE(drgn_test_small_slab_objects); i++) {
+		drgn_test_small_slab_objects[i] =
+			kmem_cache_alloc(drgn_test_small_kmem_cache,
+					 GFP_KERNEL);
+		if (!drgn_test_small_slab_objects[i])
 			return -ENOMEM;
-		drgn_test_slab_objects[i]->value = i;
+		drgn_test_small_slab_objects[i]->value = i;
 	}
+	drgn_test_big_kmem_cache =
+		kmem_cache_create("drgn_test_big",
+				  sizeof(struct drgn_test_big_slab_object),
+				  __alignof__(struct drgn_test_big_slab_object),
+				  0, drgn_test_slab_ctor);
+	if (!drgn_test_big_kmem_cache)
+		return -ENOMEM;
+	for (i = 0; i < ARRAY_SIZE(drgn_test_big_slab_objects); i++) {
+		drgn_test_big_slab_objects[i] =
+			kmem_cache_alloc(drgn_test_big_kmem_cache, GFP_KERNEL);
+		if (!drgn_test_big_slab_objects[i])
+			return -ENOMEM;
+		drgn_test_big_slab_objects[i]->value = i;
+	}
+	return 0;
+}
+
+// kthread for stack trace
+
+static struct task_struct *drgn_kthread;
+
+static int __attribute__((optimize("O0"))) drgn_kthread_fn(void *arg)
+{
+	int a, b, c;
+
+retry:
+	for (a = 0; a < 100; a++) {
+		for (b = 100; b >= 0; b--) {
+			for (c = 0; c < a; c++) {
+				set_current_state(TASK_UNINTERRUPTIBLE);
+				schedule();
+				if (kthread_should_stop())
+					return 0;
+			}
+		}
+	}
+	goto retry;
+}
+
+static void drgn_test_stack_trace_exit(void)
+{
+	if (drgn_kthread) {
+		kthread_stop(drgn_kthread);
+		drgn_kthread = NULL;
+	}
+}
+
+static int drgn_test_stack_trace_init(void)
+{
+	drgn_kthread = kthread_create(drgn_kthread_fn, (void *)0xF0F0F0F0, "drgn_kthread");
+	if (!drgn_kthread)
+		return -1;
+	wake_up_process(drgn_kthread);
 	return 0;
 }
 
@@ -325,7 +434,9 @@ int drgn_test_function(int x)
 static void drgn_test_exit(void)
 {
 	drgn_test_slab_exit();
+	drgn_test_percpu_exit();
 	drgn_test_mm_exit();
+	drgn_test_stack_trace_exit();
 }
 
 static int __init drgn_test_init(void)
@@ -337,8 +448,14 @@ static int __init drgn_test_init(void)
 	ret = drgn_test_mm_init();
 	if (ret)
 		goto out;
+	ret = drgn_test_percpu_init();
+	if (ret)
+		goto out;
 	drgn_test_rbtree_init();
 	ret = drgn_test_slab_init();
+	if (ret)
+		goto out;
+	ret = drgn_test_stack_trace_init();
 out:
 	if (ret)
 		drgn_test_exit();

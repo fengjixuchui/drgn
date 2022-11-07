@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <elfutils/libdwfl.h>
 #ifdef WITH_KDUMPFILE
@@ -130,6 +130,8 @@ static PyMethodDef drgn_methods[] = {
 	 (PyCFunction)drgnpy_linux_helper_per_cpu_ptr,
 	 METH_VARARGS | METH_KEYWORDS},
 	{"_linux_helper_idle_task", (PyCFunction)drgnpy_linux_helper_idle_task,
+	 METH_VARARGS | METH_KEYWORDS},
+	{"_linux_helper_task_cpu", (PyCFunction)drgnpy_linux_helper_task_cpu,
 	 METH_VARARGS | METH_KEYWORDS},
 	{"_linux_helper_radix_tree_lookup",
 	 (PyCFunction)drgnpy_linux_helper_radix_tree_lookup,

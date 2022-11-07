@@ -1,11 +1,11 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #ifndef DRGN_PLATFORM_H
 #define DRGN_PLATFORM_H
 
-#include <inttypes.h>
 #include <gelf.h>
+#include <inttypes.h>
 
 #include "cfi.h"
 #include "drgn.h"

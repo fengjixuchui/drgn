@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <inttypes.h>
 
@@ -7,9 +7,7 @@
 
 PyObject *Symbol_wrap(struct drgn_symbol *sym, Program *prog)
 {
-	Symbol *ret;
-
-	ret = (Symbol *)Symbol_type.tp_alloc(&Symbol_type, 0);
+	Symbol *ret = call_tp_alloc(Symbol);
 	if (ret) {
 		ret->sym = sym;
 		ret->prog = prog;

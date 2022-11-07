@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "drgnpy.h"
 #include "../helpers.h"
@@ -98,6 +98,23 @@ DrgnObject *drgnpy_linux_helper_idle_task(PyObject *self, PyObject *args,
 		return set_drgn_error(err);
 	}
 	return res;
+}
+
+PyObject *drgnpy_linux_helper_task_cpu(PyObject *self, PyObject *args,
+				       PyObject *kwds)
+{
+	static char *keywords[] = {"task", NULL};
+	struct drgn_error *err;
+	DrgnObject *task;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!:task_cpu", keywords,
+					 &DrgnObject_type, &task))
+		return NULL;
+	uint64_t cpu;
+	err = linux_helper_task_cpu(&task->obj, &cpu);
+	if (err)
+		return set_drgn_error(err);
+	return PyLong_FromUnsignedLongLong(cpu);
 }
 
 DrgnObject *drgnpy_linux_helper_radix_tree_lookup(PyObject *self,

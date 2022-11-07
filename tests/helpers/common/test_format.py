@@ -1,8 +1,8 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from drgn import Program, TypeEnumerator
-from drgn.helpers import decode_enum_type_flags, decode_flags
+from drgn.helpers.common.format import decode_enum_type_flags, decode_flags
 from tests import MOCK_PLATFORM, TestCase
 
 

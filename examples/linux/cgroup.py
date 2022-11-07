@@ -1,6 +1,6 @@
 #!/usr/bin/env drgn
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """List the paths of all descendants of a cgroup v2"""
 
@@ -9,7 +9,7 @@ import os
 import sys
 
 from drgn import cast
-from drgn.helpers import enum_type_to_class
+from drgn.helpers.common.type import enum_type_to_class
 from drgn.helpers.linux import (
     cgroup_bpf_prog_for_each,
     cgroup_path,

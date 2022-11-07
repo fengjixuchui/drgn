@@ -1,9 +1,10 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import functools
 from typing import Any, NamedTuple, Optional
 import unittest
+from unittest.mock import Mock
 
 from drgn import (
     Architecture,
@@ -106,6 +107,16 @@ def mock_program(platform=MOCK_PLATFORM, *, segments=None, types=None, objects=N
     if objects is not None:
         prog.add_object_finder(mock_object_find)
     return prog
+
+
+def assertReprPrettyEqualsStr(obj):
+    pretty_printer_mock = Mock()
+
+    obj._repr_pretty_(pretty_printer_mock, False)
+    pretty_printer_mock.text.assert_called_with(str(obj))
+
+    obj._repr_pretty_(p=pretty_printer_mock, cycle=True)
+    pretty_printer_mock.text.assert_called_with("...")
 
 
 def identical(a, b):

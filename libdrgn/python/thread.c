@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "drgnpy.h"
 #include "../program.h"
@@ -12,7 +12,7 @@ static Program *Thread_prog(Thread *self)
 
 PyObject *Thread_wrap(struct drgn_thread *thread)
 {
-	Thread *ret = (Thread *)Thread_type.tp_alloc(&Thread_type, 0);
+	Thread *ret = call_tp_alloc(Thread);
 	if (!ret)
 		return NULL;
 	struct drgn_error *err =

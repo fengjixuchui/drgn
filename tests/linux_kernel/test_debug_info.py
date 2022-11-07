@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import os
 from pathlib import Path
@@ -31,12 +31,10 @@ class TestModuleDebugInfo(LinuxKernelTestCase):
             else:
                 self.fail(f"{self.SYMBOL!r} symbol not found")
 
-    def _test_module_debug_info(self, use_proc_and_sys):
-        old_use_proc_and_sys = (
-            int(os.environ.get("DRGN_USE_PROC_AND_SYS_MODULES", "1")) != 0
-        )
-        with setenv("DRGN_USE_PROC_AND_SYS_MODULES", "1" if use_proc_and_sys else "0"):
-            if old_use_proc_and_sys == use_proc_and_sys:
+    def _test_module_debug_info(self, use_sys_module):
+        old_use_sys_module = int(os.environ.get("DRGN_USE_SYS_MODULE", "1")) != 0
+        with setenv("DRGN_USE_SYS_MODULE", "1" if use_sys_module else "0"):
+            if old_use_sys_module == use_sys_module:
                 prog = self.prog
             else:
                 prog = Program()

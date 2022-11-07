@@ -1,10 +1,10 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """
-Scriptable debugger library
+Programmable debugger
 
-drgn is a scriptable debugger. It is built on top of Python, so if you
+drgn is a programmable debugger. It is built on top of Python, so if you
 don't know at least a little bit of Python, go learn it first.
 
 drgn supports an interactive mode and a script mode. Both are simply a

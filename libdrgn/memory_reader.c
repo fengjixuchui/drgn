@@ -1,9 +1,10 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "memory_reader.h"
@@ -273,19 +274,23 @@ struct drgn_error *drgn_read_memory_file(void *buf, uint64_t address,
 					 void *arg, bool physical)
 {
 	struct drgn_memory_file_segment *file_segment = arg;
-
-	if (offset > file_segment->file_size ||
-	    count > file_segment->file_size - offset) {
-		if (offset <= file_segment->file_size)
-			address += file_segment->file_size - offset;
+	size_t file_count;
+	if (offset < file_segment->file_size) {
+		file_count = min((uint64_t)count,
+				 file_segment->file_size - offset);
+	} else {
+		file_count = 0;
+	}
+	size_t zero_count = count - file_count;
+	if (!file_segment->zerofill && zero_count > 0) {
 		return drgn_error_create_fault("memory not saved in core dump",
-					       address);
+					       address + file_count);
 	}
 
 	uint64_t file_offset = file_segment->file_offset + offset;
 	char *p = buf;
-	while (count) {
-		ssize_t ret = pread(file_segment->fd, p, count, file_offset);
+	while (file_count) {
+		ssize_t ret = pread(file_segment->fd, p, file_count, file_offset);
 		if (ret == -1) {
 			if (errno == EINTR) {
 				continue;
@@ -301,8 +306,9 @@ struct drgn_error *drgn_read_memory_file(void *buf, uint64_t address,
 		}
 		p += ret;
 		address += ret;
-		count -= ret;
+		file_count -= ret;
 		file_offset += ret;
 	}
+	memset(p, '\0', zero_count);
 	return NULL;
 }

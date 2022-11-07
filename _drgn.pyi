@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """
 libdrgn bindings
@@ -241,10 +241,9 @@ class Program:
         """
         Get the stack trace for the given thread in the program.
 
-        ``thread`` may be a thread ID (as defined by `gettid(2)
-        <http://man7.org/linux/man-pages/man2/gettid.2.html>`_), in which case
-        this will unwind the stack for the thread with that ID. The ID may be a
-        Python ``int`` or an integer :class:`Object`
+        ``thread`` may be a thread ID (as defined by :manpage:`gettid(2)`), in
+        which case this will unwind the stack for the thread with that ID. The
+        ID may be a Python ``int`` or an integer :class:`Object`
 
         ``thread`` may also be a ``struct pt_regs`` or ``struct pt_regs *``
         object, in which case the initial register values will be fetched from
@@ -306,8 +305,7 @@ class Program:
         """
         Get the thread with the given thread ID.
 
-        :param tid: Thread ID (as defined by `gettid(2)
-            <http://man7.org/linux/man-pages/man2/gettid.2.html>`_).
+        :param tid: Thread ID (as defined by :manpage:`gettid(2)`).
         :raises LookupError: if no thread has the given thread ID
         """
         ...
@@ -848,10 +846,7 @@ class Thread:
     """A thread in a program."""
 
     tid: int
-    """
-    Thread ID (as defined by `gettid(2)
-    <http://man7.org/linux/man-pages/man2/gettid.2.html>`_).
-    """
+    """Thread ID (as defined by :manpage:`gettid(2)`)."""
     object: Object
     """
     If the program is the Linux kernel, the ``struct task_struct *`` object for
@@ -1447,6 +1442,7 @@ class Object:
     def __trunc__(self) -> int: ...
     def __floor__(self) -> int: ...
     def __ceil__(self) -> int: ...
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None: ...
 
 def NULL(prog: Program, type: Union[str, Type]) -> Object:
     """
@@ -1621,6 +1617,7 @@ class StackTrace:
     """Program that this stack trace is from."""
 
     def __getitem__(self, idx: IntegerLike) -> StackFrame: ...
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None: ...
 
 class StackFrame:
     """
@@ -1707,6 +1704,16 @@ class StackFrame:
         :param name: Object name.
         """
         ...
+    def locals(self) -> List[str]:
+        """
+        Get a list of the names of all local objects (local variables, function
+        parameters, local constants, and nested functions) in the scope of this
+        frame.
+
+        Not all names may have present values, but they can be used with the
+        :meth:`[] <.__getitem__>` operator to check.
+        """
+        ...
     def source(self) -> Tuple[str, int, int]:
         """
         Get the source code location of this frame.
@@ -1741,6 +1748,7 @@ class StackFrame:
         dictionary with the register names as keys.
         """
         ...
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None: ...
 
 class Type:
     """
@@ -1913,6 +1921,7 @@ class Type:
         :raises TypeError: if this type is not a structure, union, or class
             type
         """
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None: ...
 
 class TypeMember:
     """
@@ -2326,6 +2335,14 @@ def _linux_helper_idle_task(prog: Program, cpu: IntegerLike) -> Object:
 
     :param cpu: CPU number.
     :return: ``struct task_struct *``
+    """
+    ...
+
+def _linux_helper_task_cpu(task: Object) -> int:
+    """
+    Return the CPU number that the given task last ran on.
+
+    :param task: ``struct task_struct *``
     """
     ...
 

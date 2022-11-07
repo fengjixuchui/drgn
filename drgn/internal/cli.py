@@ -1,5 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 """drgn command line interface"""
 
@@ -75,7 +75,7 @@ def main() -> None:
     python_version = ".".join(str(v) for v in sys.version_info[:3])
     libkdumpfile = f'with{"" if drgn._with_libkdumpfile else "out"} libkdumpfile'
     version = f"drgn {drgn.__version__} (using Python {python_version}, elfutils {drgn._elfutils_version}, {libkdumpfile})"
-    parser = argparse.ArgumentParser(prog="drgn", description="Scriptable debugger")
+    parser = argparse.ArgumentParser(prog="drgn", description="Programmable debugger")
 
     program_group = parser.add_argument_group(
         title="program selection",
@@ -160,12 +160,32 @@ def main() -> None:
         os.environ["DEBUGINFOD_PROGRESS"] = "1"
 
     prog = drgn.Program()
-    if args.core is not None:
-        prog.set_core_dump(args.core)
-    elif args.pid is not None:
-        prog.set_pid(args.pid or os.getpid())
-    else:
-        prog.set_kernel()
+    try:
+        if args.core is not None:
+            prog.set_core_dump(args.core)
+        elif args.pid is not None:
+            prog.set_pid(args.pid or os.getpid())
+        else:
+            prog.set_kernel()
+    except PermissionError as e:
+        print(e, file=sys.stderr)
+        if args.pid is not None:
+            print(
+                "error: attaching to live process requires ptrace attach permissions",
+                file=sys.stderr,
+            )
+        elif args.core is None:
+            print(
+                "error: drgn debugs the live kernel by default, which requires root",
+                file=sys.stderr,
+            )
+        sys.exit(1)
+    except OSError as e:
+        sys.exit(e)
+    except ValueError as e:
+        # E.g., "not an ELF core file"
+        sys.exit(f"error: {e}")
+
     if args.default_symbols is None:
         args.default_symbols = {"default": True, "main": True}
     try:
@@ -226,12 +246,14 @@ def main() -> None:
 
         sys.displayhook = displayhook
 
-        banner = """\
+        banner = f"""\
 For help, type help(drgn).
 >>> import drgn
->>> from drgn import """ + ", ".join(
-            drgn_globals
-        )
+>>> from drgn import {", ".join(drgn_globals)}
+>>> from drgn.helpers.common import *"""
+        module = importlib.import_module("drgn.helpers.common")
+        for name in module.__dict__["__all__"]:
+            init_globals[name] = getattr(module, name)
         if prog.flags & drgn.ProgramFlags.IS_LINUX_KERNEL:
             banner += "\n>>> from drgn.helpers.linux import *"
             module = importlib.import_module("drgn.helpers.linux")

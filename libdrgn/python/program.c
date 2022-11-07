@@ -1,11 +1,11 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "drgnpy.h"
 #include "../hash_table.h"
 #include "../program.h"
-#include "../vector.h"
 #include "../util.h"
+#include "../vector.h"
 
 DEFINE_HASH_SET_FUNCTIONS(pyobjectp_set, ptr_key_hash_pair, scalar_key_eq)
 
@@ -86,7 +86,7 @@ static Program *Program_new(PyTypeObject *subtype, PyObject *args,
 	if (!cache)
 		return NULL;
 
-	Program *prog = (Program *)Program_type.tp_alloc(&Program_type, 0);
+	Program *prog = call_tp_alloc(Program);
 	if (!prog) {
 		Py_DECREF(cache);
 		return NULL;
@@ -833,9 +833,7 @@ static ThreadIterator *Program_threads(Program *self)
 	struct drgn_error *err = drgn_thread_iterator_create(&self->prog, &it);
 	if (err)
 		return set_drgn_error(err);
-	ThreadIterator *ret =
-		(ThreadIterator *)ThreadIterator_type.tp_alloc(&ThreadIterator_type,
-							       0);
+	ThreadIterator *ret = call_tp_alloc(ThreadIterator);
 	if (!ret) {
 		drgn_thread_iterator_destroy(it);
 		return NULL;
